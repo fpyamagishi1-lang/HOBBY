@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>山岸家ポーカー</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:#f0f0f0;min-height:100vh;padding:12px}
+.app{max-width:720px;margin:0 auto}
+
+.hero-banner{border-radius:14px;overflow:hidden;margin-bottom:14px;position:relative;background:#0d2b1a}
+.hero-banner svg{display:block;width:100%}
+
+.stats-strip{display:flex;gap:8px;margin-bottom:12px}
+.sstat{flex:1;background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:10px 10px;display:flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.sstat-n{font-size:20px;font-weight:600;color:#1a1a1a}
+.sstat-l{font-size:11px;color:#888;margin-top:1px}
+
+.session-bar{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:8px 14px;margin-bottom:12px;font-size:13px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.session-bar span{color:#888;flex:1}
+.session-bar strong{color:#1a1a1a;font-weight:600}
+.btn-sm{background:#f5f5f5;border:1px solid #ddd;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:#333;font-weight:500}
+.btn-sm:hover{background:#e8e8e8}
+
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tab{flex:1;padding:9px 0;text-align:center;font-size:13px;border:1px solid #ddd;border-radius:10px;cursor:pointer;background:#fff;color:#888;font-weight:500}
+.tab.active{background:#1a2e1a;color:#fff;border-color:#1a2e1a}
+.panel{display:none}.panel.active{display:block}
+
+.players-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px}
+@media(max-width:480px){.players-grid{grid-template-columns:1fr}}
+.player-card{background:#fff;border:1.5px solid #e0e0e0;border-radius:14px;overflow:hidden;transition:border-color 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.07)}
+.player-card.leader{border-color:#EF9F27;border-width:2px}
+
+.card-header{position:relative;height:130px;overflow:hidden;cursor:pointer}
+.card-header-bg{width:100%;height:100%}
+.card-header-bg svg{width:100%;height:100%}
+.photo-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.photo-overlay span{font-size:10px;color:rgba(255,255,255,0.75);background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:10px}
+.card-header input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.card-header img.user-photo{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.leader-crown{position:absolute;top:7px;right:7px}
+
+.card-body{padding:11px}
+.player-top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.av-blue{background:#E6F1FB;color:#0C447C}
+.av-coral{background:#FAECE7;color:#712B13}
+.av-teal{background:#E1F5EE;color:#085041}
+.av-purple{background:#EEEDFE;color:#3C3489}
+.player-name{font-weight:600;font-size:14px;color:#1a1a1a}
+.player-role{font-size:10px;color:#999}
+.level-row{display:flex;align-items:center;gap:5px;margin-bottom:8px}
+.level-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.lv-beginner{background:#E1F5EE;color:#0F6E56}
+.lv-rookie{background:#E6F1FB;color:#185FA5}
+.lv-intermediate{background:#EEEDFE;color:#534AB7}
+.lv-advanced{background:#FAEEDA;color:#854F0B}
+.lv-expert{background:#FAECE7;color:#993C1D}
+.stars{font-size:11px}
+.star-on{color:#EF9F27}.star-off{color:#ddd}
+.stats-mini{display:flex;gap:6px;margin-bottom:8px}
+.stat-item{flex:1;text-align:center;background:#f8f8f8;border-radius:8px;padding:4px 2px}
+.stat-num{font-weight:600;font-size:14px;color:#1a1a1a;display:block}
+.stat-lbl{font-size:9px;color:#999}
+.winrate-bar{height:4px;background:#e8e8e8;border-radius:2px;margin-bottom:8px;overflow:hidden}
+.winrate-fill{height:100%;border-radius:2px;background:#1D9E75;transition:width 0.4s}
+.hand-controls{display:flex;gap:5px}
+.btn-r{flex:1;padding:7px 0;border-radius:8px;border:1px solid #ddd;cursor:pointer;font-size:12px;font-weight:600;background:#f8f8f8;color:#333;transition:all 0.1s}
+.btn-r:hover{background:#E1F5EE;color:#0F6E56;border-color:#5DCAA5}
+.btn-lose:hover{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
+.btn-draw:hover{background:#FAEEDA;color:#854F0B;border-color:#FAC775}
+.btn-r:active{transform:scale(0.97)}
+
+.ranking-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:1px solid #e8e8e8;border-radius:10px;margin-bottom:7px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.rank-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.rank-name{flex:1;font-weight:600;font-size:14px;color:#1a1a1a}
+.rank-score{font-size:12px;color:#888}
+
+.history-table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);table-layout:fixed}
+.history-table th{background:#f5f5f5;padding:8px 10px;text-align:left;font-weight:600;color:#888;border-bottom:1px solid #e8e8e8;font-size:12px}
+.history-table td{padding:8px 10px;border-bottom:1px solid #f0f0f0;color:#1a1a1a}
+.history-table tr:last-child td{border-bottom:none}
+.badge-win{background:#E1F5EE;color:#0F6E56;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-lose{background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-draw{background:#FAEEDA;color:#854F0B;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+
+.section-title{font-size:13px;font-weight:600;color:#888;margin-bottom:10px;letter-spacing:0.03em}
+.reset-btn{width:100%;margin-top:14px;padding:10px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer;font-size:13px;color:#aaa}
+.reset-btn:hover{background:#f5f5f5}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a2e1a;border-radius:10px;padding:9px 20px;font-size:13px;color:#f5e6c8;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;z-index:999;font-weight:500}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="hero-banner">
+  <svg viewBox="0 0 720 160" xmlns="http://www.w3.org/2000/svg">
+    <rect width="720" height="160" fill="#0d2b1a"/>
+    <ellipse cx="360" cy="80" rx="320" ry="68" fill="#14532d" stroke="#1a6b38" stroke-width="6"/>
+    <ellipse cx="360" cy="80" rx="290" ry="56" fill="none" stroke="#1a6b38" stroke-width="1" stroke-dasharray="6,4" opacity="0.5"/>
+    <!-- Left cards -->
+    <rect x="58" y="28" width="46" height="64" rx="6" fill="#fafaf8" stroke="#ccc" stroke-width="1"/>
+    <text x="65" y="48" font-size="13" fill="#e24b4a" font-weight="bold" font-family="serif">A</text>
+    <text x="65" y="70" font-size="24" fill="#e24b4a" font-family="serif">♥</text>
+    <rect x="78" y="36" width="46" height="64" rx="6" fill="#fafaf8" stroke="#ccc" stroke-width="1"/>
+    <text x="85" y="56" font-size="13" fill="#222" font-weight="bold" font-family="serif">K</text>
+    <text x="85" y="78" font-size="24" fill="#222" font-family="serif">♠</text>
+    <rect x="98" y="44" width="46" height="64" rx="6" fill="#fafaf8" stroke="#ccc" stroke-width="1"/>
+    <text x="105" y="64" font-size="13" fill="#e24b4a" font-weight="bold" font-family="serif">Q</text>
+    <text x="105" y="86" font-size="24" fill="#e24b4a" font-family="serif">♦</text>
+    <!-- Right cards -->
+    <rect x="576" y="28" width="46" height="64" rx="6" fill="#fafaf8" stroke="#ccc" stroke-width="1"/>
+    <text x="583" y="48" font-size="13" fill="#222" font-weight="bold" font-family="serif">J</text>
+    <text x="583" y="70" font-size="24" fill="#222" font-family="serif">♣</text>
+    <rect x="596" y="36" width="46" height="64" rx="6" fill="#fafaf8" stroke="#ccc" stroke-width="1"/>
+    <text x="600" y="56" font-size="12" fill="#e24b4a" font-weight="bold" font-family="serif">10</text>
+    <text x="603" y="78" font-size="24" fill="#e24b4a" font-family="serif">♥</text>
+    <rect x="616" y="44" width="46" height="64" rx="6" fill="#fafaf8" stroke="#ccc" stroke-width="1"/>
+    <text x="623" y="64" font-size="13" fill="#222" font-weight="bold" font-family="serif">9</text>
+    <text x="623" y="86" font-size="24" fill="#222" font-family="serif">♠</text>
+    <!-- Center chips -->
+    <circle cx="294" cy="97" r="14" fill="#e24b4a" stroke="#fff" stroke-width="2"/>
+    <circle cx="294" cy="97" r="9" fill="none" stroke="#fff" stroke-width="1.5"/>
+    <line x1="285" y1="97" x2="303" y2="97" stroke="#fff" stroke-width="1.5"/>
+    <line x1="294" y1="88" x2="294" y2="106" stroke="#fff" stroke-width="1.5"/>
+    <circle cx="320" cy="87" r="14" fill="#222" stroke="#fff" stroke-width="2"/>
+    <circle cx="320" cy="87" r="9" fill="none" stroke="#fff" stroke-width="1.5"/>
+    <line x1="311" y1="87" x2="329" y2="87" stroke="#fff" stroke-width="1.5"/>
+    <line x1="320" y1="78" x2="320" y2="96" stroke="#fff" stroke-width="1.5"/>
+    <circle cx="346" cy="97" r="14" fill="#1D9E75" stroke="#fff" stroke-width="2"/>
+    <circle cx="346" cy="97" r="9" fill="none" stroke="#fff" stroke-width="1.5"/>
+    <line x1="337" y1="97" x2="355" y2="97" stroke="#fff" stroke-width="1.5"/>
+    <line x1="346" y1="88" x2="346" y2="106" stroke="#fff" stroke-width="1.5"/>
+    <circle cx="372" cy="87" r="14" fill="#EF9F27" stroke="#fff" stroke-width="2"/>
+    <circle cx="372" cy="87" r="9" fill="none" stroke="#fff" stroke-width="1.5"/>
+    <line x1="363" y1="87" x2="381" y2="87" stroke="#fff" stroke-width="1.5"/>
+    <line x1="372" y1="78" x2="372" y2="96" stroke="#fff" stroke-width="1.5"/>
+    <circle cx="398" cy="97" r="14" fill="#85B7EB" stroke="#fff" stroke-width="2"/>
+    <circle cx="398" cy="97" r="9" fill="none" stroke="#fff" stroke-width="1.5"/>
+    <line x1="389" y1="97" x2="407" y2="97" stroke="#fff" stroke-width="1.5"/>
+    <line x1="398" y1="88" x2="398" y2="106" stroke="#fff" stroke-width="1.5"/>
+    <!-- Title -->
+    <text x="360" y="42" text-anchor="middle" font-size="24" font-weight="bold" fill="#f5e6c8" font-family="serif" letter-spacing="3">山岸家ポーカー</text>
+    <text x="360" y="60" text-anchor="middle" font-size="10" fill="#a89878" letter-spacing="5">YAMAGISHI FAMILY POKER</text>
+  </svg>
+</div>
+
+<div class="stats-strip">
+  <div class="sstat">
+    <svg width="28" height="28" viewBox="0 0 28 28"><rect x="4" y="5" width="16" height="21" rx="3" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1.2"/><rect x="8" y="9" width="16" height="21" rx="3" fill="#E6F1FB" stroke="#378ADD" stroke-width="1.2"/><text x="16" y="24" text-anchor="middle" font-size="9" fill="#185FA5" font-weight="bold">K♠</text></svg>
+    <div><div class="sstat-n" id="h-games">0</div><div class="sstat-l">総ゲーム数</div></div>
+  </div>
+  <div class="sstat">
+    <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="10" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1.5"/><circle cx="14" cy="14" r="6" fill="none" stroke="#EF9F27" stroke-width="1"/><line x1="6" y1="14" x2="22" y2="14" stroke="#EF9F27" stroke-width="1.2"/><line x1="14" y1="6" x2="14" y2="22" stroke="#EF9F27" stroke-width="1.2"/></svg>
+    <div><div class="sstat-n" id="h-round">1</div><div class="sstat-l">ラウンド</div></div>
+  </div>
+  <div class="sstat">
+    <svg width="28" height="28" viewBox="0 0 28 28"><polygon points="14,3 17,10 25,10 19,15 21,23 14,18 7,23 9,15 3,10 11,10" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1.2"/></svg>
+    <div><div class="sstat-n" id="h-leader" style="font-size:14px">—</div><div class="sstat-l">リーダー</div></div>
+  </div>
+</div>
+
+<div class="session-bar">
+  <span>ラウンド：<strong id="cur-round-lbl">1</strong></span>
+  <button class="btn-sm" onclick="addRound()">ラウンド追加</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('players',event)">プレイヤー</button>
+  <button class="tab" onclick="switchTab('ranking',event)">ランキング</button>
+  <button class="tab" onclick="switchTab('history',event)">履歴</button>
+</div>
+
+<div id="panel-players" class="panel active">
+  <div class="players-grid" id="players-grid"></div>
+</div>
+<div id="panel-ranking" class="panel">
+  <div class="section-title">総合ランキング</div>
+  <div id="ranking-list"></div>
+</div>
+<div id="panel-history" class="panel">
+  <div class="section-title">試合履歴</div>
+  <div id="history-container"></div>
+</div>
+
+<button class="reset-btn" onclick="confirmReset()">リセット</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const PLAYERS=[
+  {id:0,name:'英博',role:'山岸家のエース',initials:'英博',color:'av-blue',suit:'♠',suitColor:'#0C447C',bg:'#0d2b4a'},
+  {id:1,name:'わか奈',role:'戦略的思考の持ち主',initials:'わか奈',color:'av-coral',suit:'♥',suitColor:'#993C1D',bg:'#3d1010'},
+  {id:2,name:'あやか',role:'伸び盛りのホープ',initials:'あやか',color:'av-teal',suit:'♦',suitColor:'#0F6E56',bg:'#0a2e20'},
+  {id:3,name:'拓実',role:'大化けの予感あり',initials:'拓実',color:'av-purple',suit:'♣',suitColor:'#534AB7',bg:'#1e1442'},
+];
+const LEVELS=[
+  {name:'ビギナー',key:'beginner',stars:1,threshold:0},
+  {name:'ルーキー',key:'rookie',stars:2,threshold:5},
+  {name:'中級者',key:'intermediate',stars:3,threshold:15},
+  {name:'上級者',key:'advanced',stars:4,threshold:30},
+  {name:'エキスパート',key:'expert',stars:5,threshold:50},
+];
+function loadState(){
+  try{
+    const saved=localStorage.getItem('yamagishi_poker_state');
+    if(saved){
+      const parsed=JSON.parse(saved);
+      // Merge saved data with base players
+      const players=PLAYERS.map(p=>{
+        const s=parsed.players&&parsed.players.find(x=>x.id===p.id);
+        return s?{...p,...s}:{...p,wins:0,losses:0,draws:0,photo:null};
+      });
+      return {players,history:parsed.history||[],round:parsed.round||1};
+    }
+  }catch(e){}
+  return {players:PLAYERS.map(p=>({...p,wins:0,losses:0,draws:0,photo:null})),history:[],round:1};
+}
+function saveState(){
+  try{localStorage.setItem('yamagishi_poker_state',JSON.stringify(state));}catch(e){}
+}
+let state=loadState();
+
+function getLevel(w){let lv=LEVELS[0];for(const l of LEVELS)if(w>=l.threshold)lv=l;return lv;}
+function wr(p){const t=p.wins+p.losses+p.draws;return t===0?0:Math.round(p.wins/t*100);}
+function starsHtml(n){let s='';for(let i=1;i<=5;i++)s+=`<span class="${i<=n?'star-on':'star-off'}">★</span>`;return `<span class="stars">${s}</span>`;}
+
+function cardHeaderSvg(p){
+  return `<svg width="100%" height="130" viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <rect width="200" height="130" fill="${p.bg}"/>
+    <text x="10" y="32" font-size="40" fill="${p.suitColor}" opacity="0.2" font-family="serif">${p.suit}</text>
+    <text x="10" y="70" font-size="40" fill="${p.suitColor}" opacity="0.13" font-family="serif">${p.suit}</text>
+    <text x="10" y="108" font-size="40" fill="${p.suitColor}" opacity="0.08" font-family="serif">${p.suit}</text>
+    <text x="110" y="32" font-size="40" fill="${p.suitColor}" opacity="0.2" font-family="serif">${p.suit}</text>
+    <text x="110" y="70" font-size="40" fill="${p.suitColor}" opacity="0.13" font-family="serif">${p.suit}</text>
+    <text x="110" y="108" font-size="40" fill="${p.suitColor}" opacity="0.08" font-family="serif">${p.suit}</text>
+    <circle cx="100" cy="68" r="34" fill="${p.suitColor}" opacity="0.18"/>
+    <text x="100" y="83" text-anchor="middle" font-size="40" fill="${p.suitColor}" opacity="0.75" font-family="serif">${p.suit}</text>
+    <text x="100" y="50" text-anchor="middle" font-size="14" fill="#ffffff" opacity="0.9" font-family="serif" font-weight="bold">${p.name}</text>
+  </svg>`;
+}
+
+function renderPlayers(){
+  const maxW=Math.max(...state.players.map(x=>x.wins));
+  const leader=maxW>0?state.players.find(p=>p.wins===maxW):null;
+  document.getElementById('h-leader').textContent=leader?leader.name:'—';
+  document.getElementById('players-grid').innerHTML=state.players.map(p=>{
+    const lv=getLevel(p.wins),w=wr(p);
+    const isLeader=p.wins===maxW&&p.wins>0;
+    const headerContent=p.photo
+      ?`<img class="user-photo" src="${p.photo}"><div class="photo-overlay"><span>タップで変更</span></div>`
+      :`<div class="card-header-bg">${cardHeaderSvg(p)}<div class="photo-overlay"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>写真を追加</span></div></div>`;
+    const crownSvg=isLeader?`<div class="leader-crown"><svg width="24" height="24" viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9 17,14 19,22 12,17 5,22 7,14 2,9 9,9" fill="#EF9F27" stroke="#BA7517" stroke-width="1"/></svg></div>`:'';
+    const avatarEl=p.photo?`<img src="${p.photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0">`:`<div class="avatar ${p.color}">${p.initials}</div>`;
+    return `<div class="player-card ${isLeader?'leader':''}">
+      <div class="card-header" onclick="triggerPhoto(${p.id})">
+        ${headerContent}${crownSvg}
+        <input type="file" accept="image/*" capture="environment" data-pid="${p.id}" onchange="loadPhoto(${p.id},this)">
+      </div>
+      <div class="card-body">
+        <div class="player-top">${avatarEl}<div><div class="player-name">${p.name}</div><div class="player-role">${p.role}</div></div></div>
+        <div class="level-row"><span class="level-badge lv-${lv.key}">${lv.name}</span>${starsHtml(lv.stars)}</div>
+        <div class="stats-mini">
+          <div class="stat-item"><span class="stat-num">${p.wins}</span><span class="stat-lbl">勝</span></div>
+          <div class="stat-item"><span class="stat-num">${p.losses}</span><span class="stat-lbl">負</span></div>
+          <div class="stat-item"><span class="stat-num">${p.draws}</span><span class="stat-lbl">引分</span></div>
+          <div class="stat-item"><span class="stat-num">${w}%</span><span class="stat-lbl">勝率</span></div>
+        </div>
+        <div class="winrate-bar"><div class="winrate-fill" style="width:${w}%"></div></div>
+        <div class="hand-controls">
+          <button class="btn-r" onclick="record(${p.id},'win')">勝ち</button>
+          <button class="btn-r btn-lose" onclick="record(${p.id},'loss')">負け</button>
+          <button class="btn-r btn-draw" onclick="record(${p.id},'draw')">引分</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function triggerPhoto(pid){
+  // スマホ対応: data-id属性で直接検索
+  const inp=document.querySelector(`input[data-pid="${pid}"]`);
+  if(inp)inp.click();
+}
+function loadPhoto(pid,input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{state.players[pid].photo=e.target.result;saveState();renderPlayers();renderRanking();showToast(state.players[pid].name+'の写真を設定しました');};
+  reader.readAsDataURL(file);
+}
+
+function renderRanking(){
+  const sorted=[...state.players].sort((a,b)=>{
+    const sa=a.wins*3+a.draws-a.losses,sb=b.wins*3+b.draws-b.losses;
+    return sb!==sa?sb-sa:wr(b)-wr(a);
+  });
+  const crowns=['👑','🥈','🥉'];
+  document.getElementById('ranking-list').innerHTML=sorted.map((p,i)=>{
+    const lv=getLevel(p.wins);
+    const avEl=p.photo
+      ?`<div class="rank-avatar"><img src="${p.photo}" style="width:36px;height:36px;object-fit:cover;border-radius:50%"></div>`
+      :`<div class="rank-avatar ${p.color}">${p.initials}</div>`;
+    return `<div class="ranking-row">
+      <span style="font-size:18px;width:24px;text-align:center">${crowns[i]||(i+1)}</span>
+      ${avEl}
+      <span class="rank-name">${p.name}</span>
+      <span class="level-badge lv-${lv.key}">${lv.name}</span>
+      <span class="rank-score">${p.wins}勝${p.losses}負　${wr(p)}%</span>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const c=document.getElementById('history-container');
+  if(!state.history.length){c.innerHTML='<p style="font-size:13px;color:#aaa;padding:1rem 0">まだ記録がありません</p>';return;}
+  const rows=[...state.history].reverse().slice(0,30).map(h=>{
+    const p=state.players.find(x=>x.id===h.pid);
+    const badge=h.result==='win'?'badge-win':h.result==='loss'?'badge-lose':'badge-draw';
+    const label=h.result==='win'?'勝':h.result==='loss'?'負':'引';
+    return `<tr><td>#${h.round}</td><td><span style="color:${p.suitColor};font-family:serif">${p.suit}</span> ${p.name}</td><td><span class="${badge}">${label}</span></td><td style="color:#aaa">${h.time}</td></tr>`;
+  }).join('');
+  c.innerHTML=`<table class="history-table"><thead><tr><th style="width:38px">R</th><th>名前</th><th style="width:46px">結果</th><th style="width:54px">時刻</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function record(pid,result){
+  const p=state.players[pid];
+  if(result==='win')p.wins++;else if(result==='loss')p.losses++;else p.draws++;
+  const now=new Date();
+  state.history.push({pid,result,round:state.round,time:`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`});
+  saveState();
+  document.getElementById('h-games').textContent=state.players.reduce((s,x)=>s+x.wins+x.losses+x.draws,0);
+  showToast(p.name+(result==='win'?' が勝ちました！':result==='loss'?' が負けました':' が引き分け'));
+  renderPlayers();renderRanking();renderHistory();
+}
+
+function addRound(){
+  state.round++;
+  saveState();
+  document.getElementById('h-round').textContent=state.round;
+  document.getElementById('cur-round-lbl').textContent=state.round;
+  showToast(`ラウンド ${state.round} 開始！`);
+}
+
+function switchTab(tab,e){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='ranking')renderRanking();
+  if(tab==='history')renderHistory();
+}
+
+function confirmReset(){
+  if(confirm('勝敗をリセットしますか？\n（写真はそのまま保持されます）')){
+    state.players.forEach(p=>{p.wins=0;p.losses=0;p.draws=0;});
+    state.history=[];state.round=1;
+    saveState();
+    document.getElementById('h-games').textContent=0;
+    document.getElementById('h-round').textContent=1;
+    document.getElementById('cur-round-lbl').textContent=1;
+    renderPlayers();renderHistory();showToast('リセットしました');
+  }
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+renderPlayers();
+// 初期表示: 保存データを反映
+document.getElementById('h-games').textContent=state.players.reduce((s,x)=>s+x.wins+x.losses+x.draws,0);
+document.getElementById('h-round').textContent=state.round;
+document.getElementById('cur-round-lbl').textContent=state.round;
+
+</body>
+</html>
